@@ -1,0 +1,7 @@
+pre-commit - hook for find trailing whitespace and CRLF line
+terminators.
+
+install:
+cp pre-commit .git/hooks
+cd .git/hooks
+chmod +x pre-commit
