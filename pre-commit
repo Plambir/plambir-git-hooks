@@ -21,18 +21,37 @@ else
     against=4b825dc642cb6eb9a060e54bf8d69288fbee4904
 fi
 
+is_not_binary()
+{
+    FILE=$1
+    (git diff --cached $FILE | grep 'Binary files' 1>/dev/null 2>/dev/null) || exit 0
+    exit 1
+}
+
+find_files_with_trailing_whitespace()
+{
+    FILE=$1
+    git show :$FILE | grep -E ' +$' 1>/dev/null && echo "Trailing whitespace in '"$FILE"':" \
+        && git show :$FILE | grep -E ' +$' -n \
+        && EXIT_FROM_HOOK="1"
+}
+
+find_crlf_line_terminators()
+{
+    FILE=$1
+    git show :$FILE | grep -P "\r\n?$" 1>/dev/null && echo "CRLF line terminators in '"$FILE"'" \
+        && EXIT_FROM_HOOK="1"
+}
+
 EXIT_FROM_HOOK="0"
 for FILE in `exec git diff --cached --name-only $against` ; do
     if [ `git ls-files $FILE | wc -l` != '0' ]
     then
         # Find files with trailing whitespace
-        git show :$FILE | grep -E ' +$' 1>/dev/null && echo "Trailing whitespace in '"$FILE"':" \
-            && git show :$FILE | grep -E ' +$' -n \
-            && EXIT_FROM_HOOK="1"
+        (is_not_binary $FILE) && (find_files_with_trailing_whitespace $FILE)
 
         # Find CRLF line terminators
-        git show :$FILE | grep -P "\r\n" 1>/dev/null && echo "CRLF line terminators in '"$FILE"'" \
-            && EXIT_FROM_HOOK="1"
+        (is_not_binary $FILE) && (find_crlf_line_terminators $FILE)
     fi
 done
 
